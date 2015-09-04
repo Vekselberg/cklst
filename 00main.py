@@ -5,6 +5,6 @@ except:
 	print 'Failed to import Parallels SDK'
 	
 
-import logging
+import logging, time, commands
 from config import *
 from uuid import uuid4
