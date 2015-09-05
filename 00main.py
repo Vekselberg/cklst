@@ -10,6 +10,10 @@ from config import *
 from uuid import uuid4
 
 spacer = lambda x: x + '\n'
+sshckbypass='ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no '
+
+source_node=sshckbypass+source_node
+dest_node=sshckbypass+dest_node
 def output_w(result):
 	with open('results.log', 'a') as file:
 		file.write(spacer(result))
@@ -22,6 +26,6 @@ def output_w(result):
 
 
 def main():
-	output_w('t')
-	output_w('q')
+	output_w(source_node)
+	output_w(dest_node)
 main()
