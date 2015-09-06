@@ -34,11 +34,12 @@ def output_w(result):
 
 
 def main():
-	logging.basicConfig(filename="checklist.log", level=logging.INFO)
+	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log", level=logging.INFO)
 
+	#logging.basicConfig(format='%(asctime)s %(levelname)-7s %(filename)s:%(lineno)d %(message)s', level=max(DEBUG, WARNING - args.verbosity * 10))
 	output_w(source_node)
 	output_w(dest_node)
 	print host_slicer(dest_node) 
-
+	logging.info('tst')
 if __name__ == "__main__":
 	main()
