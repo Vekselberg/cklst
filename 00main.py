@@ -55,6 +55,27 @@ def login_server(server, host, user, password, security_level):
 	logging.info('[SUT] PCS: %s, Host OS ver: %s Host UUID: %s' %(product_version, host_os_version, host_uuid))
 
 
+def add_net_adapter(srv, vm):
+	srv_config = srv.get_srv_config().wait().get_param()
+	net_adapter = srv_config.get_net_adapter(0)
+	try:
+		vm.begin_edit().wait()
+	except prlsdkapi.PrlSDKError, e:
+		print "Error: %s" % e
+		return
+	net = vm.create_vm_dev(consts.PDE_GENERIC_NETWORK_ADAPTER)
+	net.set_virtual_network_id('Bridged')
+	net.set_configure_with_dhcp(True)
+	net.set_enabled(True)
+	net.set_bound_adapter_index(net_adapter.get_sys_index())
+	net.set_bound_adapter_name(net_adapter.get_name())
+	try:
+		vm.commit().wait()
+	except prlsdkapi.PrlSDKError, e:
+		print "Error: %s" % e
+		return 
+
+
 def create_ct(server):
 	name='CentOs_%s' %uuid4().hex[:10]
 	ct = server.create_vm()
@@ -62,6 +83,7 @@ def create_ct(server):
 	ct.set_name(name)
 	ct.set_os_template('centos-6-x86_64')
 	ct.set_ram_size(2048)
+
 	print "Creating a virtual server..."
 	try:
 		ct.reg("", True).wait()
@@ -70,6 +92,7 @@ def create_ct(server):
 		return
 	logging.info('CT %s Created.' %name)
 	print "Parallels Container %s was created successfully." %name
+	add_net_adapter(server, ct)
 
 
 
@@ -79,11 +102,11 @@ def main():
 	prlsdkapi.init_server_sdk() # Initialize the library.
 	server = prlsdkapi.Server() # Create a Server object
  	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
-	ct=0
-	while True:
-		create_ct(server)
-		ct+=1
-		if ct==5: break
+
+
+	create_ct(server)
+
+
 		
 
 	server.logoff() #log off
