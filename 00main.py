@@ -52,25 +52,41 @@ def login_server(server, host, user, password, security_level):
 	print "PCS version: " + product_version
 	print "Host OS verions: " + host_os_version
 	print "Host UUID: " + host_uuid
-	print ""
-	print login_response
-	print ""
+	logging.info('[SUT] PCS: %s, Host OS ver: %s Host UUID: %s' %(product_version, host_os_version, host_uuid))
+
+
+def create_ct(server):
+	name='CentOs_%s' %uuid4().hex[:10]
+	ct = server.create_vm()
+	ct.set_vm_type(consts.PVT_CT)
+	ct.set_name(name)
+	ct.set_os_template('centos-6-x86_64')
+	ct.set_ram_size(2048)
+	print "Creating a virtual server..."
+	try:
+		ct.reg("", True).wait()
+	except prlsdkapi.PrlSDKError, e:
+		print "Error: %s" % e
+		return
+	logging.info('CT %s Created.' %name)
+	print "Parallels Container %s was created successfully." %name
+
 
 
 
 def main():
-	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log", level=logging.INFO)
-"""
-	#logging.basicConfig(format='%(asctime)s %(levelname)-7s %(filename)s:%(lineno)d %(message)s', level=max(DEBUG, WARNING - args.verbosity * 10))
-	output_w(source_node)
-	output_w(dest_node)
-	print host_slicer(dest_node) 
-	logging.info('tst')
-"""
+	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.INFO)
 	prlsdkapi.init_server_sdk() # Initialize the library.
 	server = prlsdkapi.Server() # Create a Server object
- 	login_server(server, "mccp6.qa.sw.ru", "root", "1q2w3e", consts.PSL_NORMAL_SECURITY); # and log in to PCS.
-	server.logoff() #log ogg 
+ 	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
+	ct=0
+	while True:
+		create_ct(server)
+		ct+=1
+		if ct==5: break
+		
+
+	server.logoff() #log off
 	prlsdkapi.deinit_sdk() # deinitialize the library.
 
 
