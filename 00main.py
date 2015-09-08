@@ -67,6 +67,7 @@ def add_net_adapter(srv, vm):
 	net.set_virtual_network_id('Bridged')
 	net.set_configure_with_dhcp(True)
 	net.set_enabled(True)
+	net.set_auto_apply(True)
 	net.set_bound_adapter_index(net_adapter.get_sys_index())
 	net.set_bound_adapter_name(net_adapter.get_name())
 	try:
