@@ -19,8 +19,9 @@ consts = prlsdkapi.prlsdk.consts
 ssh_s_node=sshckbypass+source_node
 ssh_d_node=sshckbypass+dest_node
 PCS_ver=[]
-MD5_list=[]
+CT={}
 CT_MD5_list={}
+
 
 class Halt(Exception):
 	pass
@@ -57,6 +58,7 @@ def login_server(server, host, user, password, security_level):
 	print "Host UUID: " + host_uuid
 	PCS_ver.append(product_version)
 	logging.info('[SUT] PCS: %s, Host OS ver: %s Host UUID: %s' %(product_version, host_os_version, host_uuid))
+
 
 
 def add_net_adapter(srv, vm):
@@ -118,27 +120,92 @@ def create_ct(server):
 	print "Parallels Container %s was created successfully." %name
 	add_net_adapter(server, ct)
 	CT_MD5_list[name]=""
+	CT[name]=ct
 	ct.start().wait()
+
+
+def search_vm(server, vm_to_find):
+	try:
+		result = server.get_vm_list().wait()
+	except prlsdkapi.PrlSDKError, e:
+		print "Error: %s" % e
+		return            
+	for i in range(result.get_params_count()):
+		vm = result.get_param_by_index(i)
+		vm_name = vm.get_name()
+		print vm_name
+		if vm_name.startswith(vm_to_find):
+			return vm
+	print 'Virtual server "' + vm_to_find + '" not found.'
+
+
+
+
+
+def switcher(vm, action):
+	if action=="stop":
+		try:
+			vm.stop(True).wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e    
+	if action=="start":
+		try:
+			vm.start().wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e
+	if action=="pause": #unimplemented yet
+		try:
+			vm.pause(True).wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e
+	if action=="resume":
+		try:
+			vm.resume().wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e    
+	if action=="restart":
+		try:
+			vm.restart().wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e        
+	if action=="reset":
+		try:
+			vm.reset().wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e
+
+
+
+
 
 
 
 
 
 def main():
-	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.INFO)
+	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.DEBUG)
 	prlsdkapi.init_server_sdk() # Initialize the library.
 	server = prlsdkapi.Server() # Create a Server object
  	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
 
-	for r in xrange(1,6):
+	for r in xrange(1,3):
 		create_ct(server)
 	print 'Creating content...'
 	create_bigfile()
-	print CT_MD5_list
-	raw_input('md5 filled')
-	for ct in CT_MD5_list.keys():
-		md5_checks(ct)
-		
+#	print CT_MD5_list
+	logging.debug('[VE] %s' %CT_MD5_list.items())
+	#raw_input('md5 filled')
+	#name=CT_MD5_list.keys()[0]
+	
+
+	switcher(CT[CT.keys()[0]],'pause')	
+	
+
+
+
+
+
+
 
 	server.logoff() #log off
 	prlsdkapi.deinit_sdk() # deinitialize the library.
