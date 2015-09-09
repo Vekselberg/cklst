@@ -82,15 +82,23 @@ def add_net_adapter(srv, vm):
 
 
 def create_bigfile(): #TODO: reparate in 2 func 
-	md5=' \'md5sum /tstfile\''
 	
 	for ctname in CT_MD5_list.keys():
 		dd=' \'prlctl exec %s \'dd if=/dev/urandom of=/testfile bs=1M count=52\'\'' %ctname
-		md5=' \'prlctl exec %s \'md5sum /testfile\'\'' %ctname
 		commands.getoutput(sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+dd)
-		sum=commands.getoutput(sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+md5).replace('\n'," ")
-		#print sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+md5
-		CT_MD5_list[ctname]=re.findall('\w[0-9a-z]{31}',sum)[0]
+		md5_checks(ctname)
+
+def md5_checks(ct):
+	md5=' \'prlctl exec %s \'md5sum /testfile\'\'' %ct
+	sum=commands.getoutput(sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+md5).replace('\n'," ")
+	if CT_MD5_list[ct]=="":
+		CT_MD5_list[ct]=re.findall('\w[0-9a-z]{31}',sum)[0]
+	else:
+		if CT_MD5_list[ct]==re.findall('\w[0-9a-z]{31}',sum)[0]:
+			print 'MD5 check for CT: %s PASSED.' %ct
+		else:
+			print 'MD5 check for CT: %s FAILED.' %ct
+
 
 def create_ct(server):
 	name='CentOs_%s' %uuid4().hex[:10]
@@ -126,12 +134,14 @@ def main():
 		create_ct(server)
 	print 'Creating content...'
 	create_bigfile()
-
+	print CT_MD5_list
+	raw_input('md5 filled')
+	for ct in CT_MD5_list.keys():
+		md5_checks(ct)
 		
 
 	server.logoff() #log off
 	prlsdkapi.deinit_sdk() # deinitialize the library.
-	print CT_MD5_list
 
 
 if __name__ == "__main__":
