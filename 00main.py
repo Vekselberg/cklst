@@ -18,6 +18,9 @@ sshckbypass='ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no '
 consts = prlsdkapi.prlsdk.consts
 ssh_s_node=sshckbypass+source_node
 ssh_d_node=sshckbypass+dest_node
+PCS_ver=[]
+MD5_list=[]
+CT_MD5_list={}
 
 class Halt(Exception):
 	pass
@@ -52,6 +55,7 @@ def login_server(server, host, user, password, security_level):
 	print "PCS version: " + product_version
 	print "Host OS verions: " + host_os_version
 	print "Host UUID: " + host_uuid
+	PCS_ver.append(product_version)
 	logging.info('[SUT] PCS: %s, Host OS ver: %s Host UUID: %s' %(product_version, host_os_version, host_uuid))
 
 
@@ -77,6 +81,17 @@ def add_net_adapter(srv, vm):
 		return 
 
 
+def create_bigfile(): #TODO: reparate in 2 func 
+	md5=' \'md5sum /tstfile\''
+	
+	for ctname in CT_MD5_list.keys():
+		dd=' \'prlctl exec %s \'dd if=/dev/urandom of=/testfile bs=1M count=52\'\'' %ctname
+		md5=' \'prlctl exec %s \'md5sum /testfile\'\'' %ctname
+		commands.getoutput(sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+dd)
+		sum=commands.getoutput(sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+md5).replace('\n'," ")
+		#print sshckbypass+'-i dest '+host_slicer(source_node)[0]+'@'+host_slicer(source_node)[2]+md5
+		CT_MD5_list[ctname]=re.findall('\w[0-9a-z]{31}',sum)[0]
+
 def create_ct(server):
 	name='CentOs_%s' %uuid4().hex[:10]
 	ct = server.create_vm()
@@ -94,6 +109,9 @@ def create_ct(server):
 	logging.info('CT %s Created.' %name)
 	print "Parallels Container %s was created successfully." %name
 	add_net_adapter(server, ct)
+	CT_MD5_list[name]=""
+	ct.start().wait()
+
 
 
 
@@ -104,15 +122,16 @@ def main():
 	server = prlsdkapi.Server() # Create a Server object
  	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
 
-
-	create_ct(server)
-
+	for r in xrange(1,6):
+		create_ct(server)
+	print 'Creating content...'
+	create_bigfile()
 
 		
 
 	server.logoff() #log off
 	prlsdkapi.deinit_sdk() # deinitialize the library.
-
+	print CT_MD5_list
 
 
 if __name__ == "__main__":
