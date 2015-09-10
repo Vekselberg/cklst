@@ -173,7 +173,11 @@ def switcher(vm, action):
 			vm.reset().wait()
 		except prlsdkapi.PrlSDKError, e:
 			print "Error: %s" % e
-
+	if action=="suspend":
+                try:
+                        vm.suspend().wait()
+                except prlsdkapi.PrlSDKError, e:
+                        print "Error: %s" % e
 
 
 
@@ -198,7 +202,7 @@ def main():
 	#name=CT_MD5_list.keys()[0]
 	
 
-	switcher(CT[CT.keys()[0]],'pause')	
+	switcher(CT[CT.keys()[0]],'suspend')	
 	
 
 
