@@ -123,6 +123,11 @@ def create_ct(server):
 	ct.start().wait()
 	print ct.get_uuid()
 
+def clone(ct):
+	ct2 = ct.clone('121', '').wait().get_param()
+	print('Clone name = %s' % ct2.get_name())
+
+
 def search_vm(server, vm_to_find):
 	try:
 		result = server.get_vm_list().wait()
@@ -263,7 +268,7 @@ def main():
 	print ''
 #	switcher(CT[CT.keys()[0]],'stop')
 #	CT[CT.keys()[0]].delete()
-
+	clone(CT[CT.keys()[1]])
 		
 
 #	print CT[CT.keys()[1]].get_uuid()
@@ -273,7 +278,7 @@ def main():
 #	print CT.keys()[1] 
 #	print result.get_param_as_string()
 
-	cleanup()
+	#cleanup()
 
 
 
