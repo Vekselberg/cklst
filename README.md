@@ -1,5 +1,5 @@
 # Base VZ container test
-
+(using Parallels SDK API) <br />
 http://tms.sw.ru//link.php?action=show_tc&node_id=151986
 
 Create <br />
