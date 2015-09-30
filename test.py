@@ -122,7 +122,6 @@ def create_ct(server):
 	CT[name]=ct
 	ct.start().wait()
 	print ct.get_uuid()
-#	ct.begin_backup()	
 
 def search_vm(server, vm_to_find):
 	try:
@@ -147,66 +146,108 @@ def switcher(vm, action):
 		try:
 			vm.stop(True).wait()
 		except prlsdkapi.PrlSDKError, e:
-			print "Error: %s" % e    
+                        logging.debug("Error: %s" % e)
+			raise halt
 	if action=="start":
 		try:
 			vm.start().wait()
 		except prlsdkapi.PrlSDKError, e:
-			print "Error: %s" % e
+                        logging.debug("Error: %s" % e)
+			raise halt
 	if action=="pause": #unimplemented yet
 		try:
 			vm.pause(True).wait()
 		except prlsdkapi.PrlSDKError, e:
-			print "Error: %s" % e
+                        logging.debug("Error: %s" % e)
+			raise halt
 	if action=="resume":
 		try:
 			vm.resume().wait()
 		except prlsdkapi.PrlSDKError, e:
-			print "Error: %s" % e    
+                        logging.debug("Error: %s" % e)
+			raise halt
 	if action=="restart":
 		try:
 			vm.restart().wait()
 		except prlsdkapi.PrlSDKError, e:
-			print "Error: %s" % e        
-	if action=="reset":
+			logging.debug("Error: %s" % e)
+			raise halt
+
+	if action=="reset": #unimplemented yet
 		try:
 			vm.reset().wait()
 		except prlsdkapi.PrlSDKError, e:
-			print "Error: %s" % e
+			logging.debug("Error: %s" % e)
+			raise halt
 	if action=="suspend":
                 try:
                         vm.suspend().wait()
                 except prlsdkapi.PrlSDKError, e:
-                        print "Error: %s" % e
+			logging.debug("Error: %s" % e)
+			raise halt
 
 
+def scope1(ct):
+#stop,start,suspend,resume,restart
+	try:
+		switcher(ct,'stop')
+		logging.info('CT %s STOPPED' %ct)
+		print '* STOP passed'
+	except:
+		logging.error('CT %s STOP FAILED' %ct)
+		print '* STOP failed'
+	#raw_input()
+	try:
+		switcher(ct,'start')
+		logging.info('CT %s STARTED' %ct)
+		print '* START passed'
+	except:
+		logging.error('CT %s START FAILED' %ct)
+		print '* START failed'
+	try:
+		switcher(ct,'suspend')
+		logging.info('CT %s SUSPENDED' %ct)
+		print '* SUSPEND passed'
+	except:
+		logging.error('CT %s SUSPEND FAILED' %ct)
+		print '* SUSPEND failed'
+	try:
+                switcher(ct,'resume')
+                logging.info('CT %s RESUMED' %ct)
+		print '* RESUME passed'
+        except:
+                logging.error('CT %s RESUME FAILED' %ct)
+		print '* RESUME failed'
+	try:
+                switcher(ct,'restart')
+                logging.info('CT %s RESTARTED' %ct)
+		print '* RESTART passed'
+        except:
+                logging.error('CT %s RESTART FAILED' %ct)
+		print '* RESTART failed'
 
-
-
-
+def cleanup():
+	print ''
+	print 'Cleaning up...'
+	for i in CT.values():
+		switcher(i, 'stop')
+		i.delete()
 
 
 def main():
 	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.DEBUG)
+	print '1'
 	prlsdkapi.init_server_sdk() # Initialize the library.
 	server = prlsdkapi.Server() # Create a Server object
  	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
 
-	for r in xrange(1,4):
+	for r in xrange(1,6):
 		create_ct(server)
 	print 'Creating content...'
 	create_bigfile()
 #	print CT_MD5_list
 	logging.debug('[VE] %s' %CT_MD5_list.items())
-	#raw_input('md5 filled')
-	#name=CT_MD5_list.keys()[0]
 	
-	#suspend 1st CT
-	try:
-		switcher(CT[CT.keys()[0]],'suspend')	
-		logging.info('CT %s SUSPENDED' %CT.keys()[0])
-	except:
-		logging.error('CT %s SUSPENDING FAILED' %CT.keys()[0])
 	
 	#create snapshot CT#2
 	try:
@@ -215,19 +256,24 @@ def main():
 		
 	except:
 		print "Snapshot creation failure"
-	try:
-		server.create_vm_backup(CT.keys()[2])
-		print "backuped!"
-	except:
-		print 'nkup failed'
+
+	print ''
+	print 'First scope started'
+	scope1(CT[CT.keys()[0]])
+	print ''
+#	switcher(CT[CT.keys()[0]],'stop')
+#	CT[CT.keys()[0]].delete()
+
 		
 
-	print CT[CT.keys()[1]].get_uuid()
-	job=CT[CT.keys()[1]].get_snapshots_tree()
-	job.wait()
-	result=job.get_result()
-	print CT.keys()[1] 
-	print result.get_param_as_string()
+#	print CT[CT.keys()[1]].get_uuid()
+#	job=CT[CT.keys()[1]].get_snapshots_tree()
+#	job.wait()
+#	result=job.get_result()
+#	print CT.keys()[1] 
+#	print result.get_param_as_string()
+
+	cleanup()
 
 
 
