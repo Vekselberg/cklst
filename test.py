@@ -283,6 +283,15 @@ def cleanup():
 		switcher(i, 'stop')
 		i.delete()
 
+def migrate(ct):
+	slave=prlsdkapi.Server()
+	login_server(slave, host_slicer(dest_node)[2], host_slicer(dest_node)[0], host_slicer(dest_node)[1], consts.PSL_NORMAL_SECURITY)
+	try:
+		ct.migrate(slave).wait()
+	except:
+		pass
+
+
 
 def main():
 	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.DEBUG)
@@ -314,6 +323,13 @@ def main():
 	print 'Create CLONE and check MD5 for test content...'
 	clone(CT[CT.keys()[2]])
 		
+
+	if dest_node!="":
+		print "Migtaring..."
+		try:
+			migrate(CT[CT.keys()[3]])
+		except:
+			print "Migration FAILED"
 
 
 
