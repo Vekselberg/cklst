@@ -124,9 +124,19 @@ def create_ct(server):
 	print ct.get_uuid()
 
 def clone(ct):
-	ct2 = ct.clone('121', '').wait().get_param()
+	ct2 = ct.clone('clone_'+uuid4().hex[:10], '').wait().get_param()
+	ct2.start().wait()
 	print('Clone name = %s' % ct2.get_name())
-
+	logging.info('Clone created, started')
+	CT[ct2.get_name()]=ct2
+	CT_MD5_list[ct2.get_name()]=""
+	md5_checks(ct2.get_name())
+	if CT_MD5_list[ct2.get_name()]==CT_MD5_list[ct.get_name()]:
+		print 'MD5 check for clone PASSED'
+		logging.info('MD5 check for clone PASSED')
+	else:
+		print 'MD5 check for clone FAILED'
+		logging.error('MD5 check for clone FAILED')
 
 def search_vm(server, vm_to_find):
 	try:
@@ -143,7 +153,42 @@ def search_vm(server, vm_to_find):
 	print 'Virtual server "' + vm_to_find + '" not found.'
 
 
+def get_vm_list(server):
+	job = server.get_vm_list()
+	result = job.wait()
 
+	for i in range(result.get_params_count()):
+		vm = result.get_param_by_index(i)
+		vm_config = vm.get_config()
+		vm_name = vm_config.get_name()
+		vm_type = vm_config.get_vm_type()
+ 
+		if vm_type == consts.PVT_VM:
+			vm_type_desc = "Parallels Virtual Machine"
+		elif vm_type == consts.PVT_CT:
+			vm_type_desc = "Parallels Container"
+ 
+		try:
+			state_result = vm.get_state().wait()
+		except prlsdkapi.PrlSDKError, e:
+			print "Error: %s" % e
+			return
+ 
+		vm_info = state_result.get_param()
+ 		state_code = vm_info.get_state()
+		state_desc = "unknown status"
+ 
+		if state_code == consts.VMS_RUNNING:
+			state_desc = "running"
+		elif state_code == consts.VMS_STOPPED:
+			state_desc = "stopped"
+		elif state_code == consts.VMS_PAUSED:
+			state_desc = "paused"
+		elif state_code == consts.VMS_SUSPENDED:
+			state_desc = "suspended"
+
+		vm_name = vm_name + " "
+		print vm_name[:25] + "\t" + vm_type_desc + "\t" + state_desc 
 
 
 def switcher(vm, action):
@@ -196,39 +241,39 @@ def scope1(ct):
 #stop,start,suspend,resume,restart
 	try:
 		switcher(ct,'stop')
-		logging.info('CT %s STOPPED' %ct)
+		logging.info('CT %s STOPPED' %ct.get_name())
 		print '* STOP passed'
 	except:
-		logging.error('CT %s STOP FAILED' %ct)
+		logging.error('CT %s STOP FAILED' %ct.get_name())
 		print '* STOP failed'
 	#raw_input()
 	try:
 		switcher(ct,'start')
-		logging.info('CT %s STARTED' %ct)
+		logging.info('CT %s STARTED' %ct.get_name())
 		print '* START passed'
 	except:
-		logging.error('CT %s START FAILED' %ct)
+		logging.error('CT %s START FAILED' %ct.get_name())
 		print '* START failed'
 	try:
 		switcher(ct,'suspend')
-		logging.info('CT %s SUSPENDED' %ct)
+		logging.info('CT %s SUSPENDED' %ct.get_name())
 		print '* SUSPEND passed'
 	except:
-		logging.error('CT %s SUSPEND FAILED' %ct)
+		logging.error('CT %s SUSPEND FAILED' %ct.get_name())
 		print '* SUSPEND failed'
 	try:
                 switcher(ct,'resume')
-                logging.info('CT %s RESUMED' %ct)
+                logging.info('CT %s RESUMED' %ct.get_name())
 		print '* RESUME passed'
         except:
-                logging.error('CT %s RESUME FAILED' %ct)
+                logging.error('CT %s RESUME FAILED' %ct.get_name())
 		print '* RESUME failed'
 	try:
                 switcher(ct,'restart')
-                logging.info('CT %s RESTARTED' %ct)
+                logging.info('CT %s RESTARTED' %ct.get_name())
 		print '* RESTART passed'
         except:
-                logging.error('CT %s RESTART FAILED' %ct)
+                logging.error('CT %s RESTART FAILED' %ct.get_name())
 		print '* RESTART failed'
 
 def cleanup():
@@ -241,16 +286,16 @@ def cleanup():
 
 def main():
 	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.DEBUG)
-	print '1'
 	prlsdkapi.init_server_sdk() # Initialize the library.
 	server = prlsdkapi.Server() # Create a Server object
  	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
 
-	for r in xrange(1,6):
+#	get_vm_list(server)
+	print ''
+	for r in xrange(1,4):
 		create_ct(server)
 	print 'Creating content...'
 	create_bigfile()
-#	print CT_MD5_list
 	logging.debug('[VE] %s' %CT_MD5_list.items())
 	
 	
@@ -258,18 +303,19 @@ def main():
 	try:
 		CT[CT.keys()[1]].create_snapshot('testfile')
 		print "Snapshot created"
-		
+		logging.info('Snapshot for CT %s created' %CT.keys()[1])
 	except:
 		print "Snapshot creation failure"
-
+		logging.error('Snapshot creation for CT %s FAILED' %CT.keys()[1])
 	print ''
 	print 'First scope started'
 	scope1(CT[CT.keys()[0]])
 	print ''
-#	switcher(CT[CT.keys()[0]],'stop')
-#	CT[CT.keys()[0]].delete()
-	clone(CT[CT.keys()[1]])
+	print 'Create CLONE and check MD5 for test content...'
+	clone(CT[CT.keys()[2]])
 		
+
+
 
 #	print CT[CT.keys()[1]].get_uuid()
 #	job=CT[CT.keys()[1]].get_snapshots_tree()
@@ -278,7 +324,7 @@ def main():
 #	print CT.keys()[1] 
 #	print result.get_param_as_string()
 
-	#cleanup()
+	cleanup()
 
 
 
