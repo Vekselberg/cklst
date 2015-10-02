@@ -17,6 +17,7 @@ sshckbypass='ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no '
 consts = prlsdkapi.prlsdk.consts
 ssh_s_node=sshckbypass+source_node
 ssh_d_node=sshckbypass+dest_node
+
 PCS_ver=[]
 CT={}
 CT_MD5_list={}
@@ -99,6 +100,16 @@ def md5_checks(ct):
 			print 'MD5 check for CT: %s PASSED.' %ct
 		else:
 			print 'MD5 check for CT: %s FAILED.' %ct
+
+def clone_md5_check(ct):
+	md5=' \'prlctl exec %s \'md5sum /testfile\'\'' %ct
+        sum=commands.getoutput(sshckbypass+'-i dest '+host_slicer(dest_node)[0]+'@'+host_slicer(dest_node)[2]+md5).replace('\n'," ")
+	if CT_MD5_list[ct]==re.findall('\w[0-9a-z]{31}',sum)[0]:
+		print 'MD5 check for migrated CT %s PASSED.' %ct
+		logging.info('MD5 check for migrated CT %s PASSED.' %ct)
+	else:
+		logging.info('MD5 check for migrated CT %s FAILED.' %ct)
+		print 'MD5 check for migrated CT %s FAILED.' %ct
 
 
 def create_ct(server):
@@ -286,10 +297,18 @@ def cleanup():
 def migrate(ct):
 	slave=prlsdkapi.Server()
 	login_server(slave, host_slicer(dest_node)[2], host_slicer(dest_node)[0], host_slicer(dest_node)[1], consts.PSL_NORMAL_SECURITY)
+	
 	try:
 		ct.migrate(slave).wait()
 	except:
 		pass
+
+
+def prlinit():
+	prlsdkapi.init_server_sdk() # Initialize the library.
+        server = prlsdkapi.Server() # Create a Server object
+        login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
+
 
 
 
@@ -301,8 +320,9 @@ def main():
 
 #	get_vm_list(server)
 	print ''
-	for r in xrange(1,4):
+	for r in xrange(1,5):
 		create_ct(server)
+	logging.debug(CT)
 	print 'Creating content...'
 	create_bigfile()
 	logging.debug('[VE] %s' %CT_MD5_list.items())
@@ -325,12 +345,18 @@ def main():
 		
 
 	if dest_node!="":
-		print "Migtaring..."
+		print "Migrating..."
 		try:
 			migrate(CT[CT.keys()[3]])
+			print 'Migrated, let\'s check MD5 inside..'
+			logging.info('CT %s migrated' %CT.keys()[3])
+			clone_md5_check(CT.keys()[3])
+
 		except:
 			print "Migration FAILED"
 
+	else:
+		print 'No slave node provided, migration test skiped'
 
 
 #	print CT[CT.keys()[1]].get_uuid()
