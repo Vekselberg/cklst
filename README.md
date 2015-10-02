@@ -10,11 +10,12 @@ Resume - Done<br />
 Restart - Done<br />
 Destroy - Done<br />
 Clone - Done<br />
-Migrate [ToDo]<br />
+Migrate -Done<br />
 Take snapshot - Done<br />
 Revert to snapshot [ToDo]<br />
 Backup [ToDo]<br />
 Restore [ToDo]<br />
 
 Checks inside CT:<br />
-MD5 check (data safety) - Done
+MD5 check for cloned CT - Done <br />
+MD5 check foe migrated CT - Done <br />
