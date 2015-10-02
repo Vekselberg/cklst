@@ -101,14 +101,15 @@ def md5_checks(ct):
 		else:
 			print 'MD5 check for CT: %s FAILED.' %ct
 
-def clone_md5_check(ct):
+def mig_md5_check(ct):
 	md5=' \'prlctl exec %s \'md5sum /testfile\'\'' %ct
         sum=commands.getoutput(sshckbypass+'-i dest '+host_slicer(dest_node)[0]+'@'+host_slicer(dest_node)[2]+md5).replace('\n'," ")
 	if CT_MD5_list[ct]==re.findall('\w[0-9a-z]{31}',sum)[0]:
 		print 'MD5 check for migrated CT %s PASSED.' %ct
 		logging.info('MD5 check for migrated CT %s PASSED.' %ct)
 	else:
-		logging.info('MD5 check for migrated CT %s FAILED.' %ct)
+		logging.error('MD5 check for migrated CT %s FAILED.' %ct)
+		logging.debug('source MD5 sum %s != target MD5 sum %s' %(CT_MD5_list[ct],re.findall('\w[0-9a-z]{31}',sum)[0]))
 		print 'MD5 check for migrated CT %s FAILED.' %ct
 
 
@@ -350,7 +351,8 @@ def main():
 			migrate(CT[CT.keys()[3]])
 			print 'Migrated, let\'s check MD5 inside..'
 			logging.info('CT %s migrated' %CT.keys()[3])
-			clone_md5_check(CT.keys()[3])
+			raw_input()
+			mig_md5_check(CT.keys()[3])
 
 		except:
 			print "Migration FAILED"
