@@ -300,9 +300,14 @@ def cleanup():
 	print ''
 	print 'Cleaning up...'
 	for i in CT.values():
-		switcher(i, 'stop')
-		switcher(i, 'delete')
-		
+		try:
+			switcher(i, 'stop')
+		except:
+			print "STOP failure. Already stopped? Why?\nManual cleanup needed."
+		try:
+			switcher(i, 'delete')
+		except:
+			print 'Delete failure'	
 #raw_input('press enter')
 #for i in CT.values():
 #	i.delete().wait()
@@ -335,19 +340,21 @@ def main():
 	
 	
 	#create snapshot CT#2
-	print bcolors.HEADER + '\nTaking snapshot' + bcolors.ENDC
-	try:
-		CT[CT.keys()[1]].create_snapshot('testfile')
-		print bcolors.OKGREEN + "Snapshot created" + bcolors.ENDC
-		logging.info('Snapshot for CT %s created' %CT.keys()[1])
-	except:
-		print bcolors.FAIL + "Snapshot creation failure" + bcolors.ENDC
-		logging.error('Snapshot creation for CT %s FAILED' %CT.keys()[1])
+#	print bcolors.HEADER + '\nTaking snapshot' + bcolors.ENDC
+#	try:
+#		CT[CT.keys()[1]].create_snapshot('testfile')
+#		print bcolors.OKGREEN + "Snapshot created" + bcolors.ENDC
+#		logging.info('Snapshot for CT %s created' %CT.keys()[1])
+#	except:
+#		print bcolors.FAIL + "Snapshot creation failure" + bcolors.ENDC
+#		logging.error('Snapshot creation for CT %s FAILED' %CT.keys()[1])
+
+
 	print '\nBase checks:'
 	scope1(CT[CT.keys()[0]])
 	print ''
-	#print bcolors.HEADER + '\nCreate CLONE and check MD5 for test content...' + bcolors.ENDC
-	#clone(CT[CT.keys()[2]])
+	print bcolors.HEADER + '\nCreate CLONE and check MD5 for test content...' + bcolors.ENDC
+	clone(CT[CT.keys()[2]])
 		
 
 	if dest_node!="":
@@ -373,7 +380,7 @@ def main():
 #	print CT.keys()[1] 
 #	print result.get_param_as_string()
 
-	#cleanup()
+	cleanup()
 
 
 
