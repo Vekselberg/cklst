@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+from colorize import bcolors
 try:
 	import prlsdkapi
 except:
-	print 'Failed to import Parallels SDK\nUnable to continue.\n'
+	print bcolors.FAIL + 'Failed to import Parallels SDK\nUnable to continue.\n' + bcolors.ENDC
 	exit(1)
 
 import logging, time, commands, hashlib, re
@@ -27,6 +28,7 @@ class Halt(Exception):
 	pass
 
 
+
 def output_w(result):
 	with open('results.log', 'a') as file:
 		file.write(spacer(result))
@@ -34,8 +36,8 @@ def output_w(result):
 
 def login_server(server, host, user, password, security_level):
 	if host=="localhost":
-		print 'Test should be runned on remote server'
-		raise halt
+		print bcolors.FAIL + 'Test should be runned on remote server' + bcolors.ENDC
+		raise Halt
 	else:
 		try:
 			result = server.login(host, user, password, '', 0, 0,security_level).wait()
@@ -97,7 +99,7 @@ def md5_checks(ct):
 		CT_MD5_list[ct]=re.findall('\w[0-9a-z]{31}',sum)[0]
 	else:
 		if CT_MD5_list[ct]==re.findall('\w[0-9a-z]{31}',sum)[0]:
-			print 'MD5 check for CT: %s PASSED.' %ct
+			print bcolors.OKGREEN + 'MD5 check for CT: %s PASSED.' %ct + bcolors.ENDC
 		else:
 			print 'MD5 check for CT: %s FAILED.' %ct
 
@@ -105,12 +107,12 @@ def mig_md5_check(ct):
 	md5=' \'prlctl exec %s \'md5sum /testfile\'\'' %ct
         sum=commands.getoutput(sshckbypass+'-i dest '+host_slicer(dest_node)[0]+'@'+host_slicer(dest_node)[2]+md5).replace('\n'," ")
 	if CT_MD5_list[ct]==re.findall('\w[0-9a-z]{31}',sum)[0]:
-		print 'MD5 check for migrated CT %s PASSED.' %ct
+		print bcolors.OKGREEN + 'MD5 check for migrated CT %s PASSED.' %ct + bcolors.ENDC
 		logging.info('MD5 check for migrated CT %s PASSED.' %ct)
 	else:
 		logging.error('MD5 check for migrated CT %s FAILED.' %ct)
 		logging.debug('source MD5 sum %s != target MD5 sum %s' %(CT_MD5_list[ct],re.findall('\w[0-9a-z]{31}',sum)[0]))
-		print 'MD5 check for migrated CT %s FAILED.' %ct
+		print bcolors.FAIL + 'MD5 check for migrated CT %s FAILED.' %ct + bcolors.ENDC
 
 
 def create_ct(server):
@@ -121,33 +123,33 @@ def create_ct(server):
 	ct.set_os_template('centos-6-x86_64')
 	ct.set_ram_size(2048)
 
-	print "Creating a virtual server..."
+	#print "Creating a virtual server..."
 	try:
 		ct.reg("", True).wait()
 	except prlsdkapi.PrlSDKError, e:
 		print "Error: %s" % e
 		return
 	logging.info('CT %s Created.' %name)
-	print "Parallels Container %s was created successfully." %name
+	print bcolors.OKGREEN +  "Container %s was created successfully." %name  + bcolors.ENDC
 	add_net_adapter(server, ct)
 	CT_MD5_list[name]=""
 	CT[name]=ct
 	ct.start().wait()
-	print ct.get_uuid()
+	#print ct.get_uuid()
 
 def clone(ct):
 	ct2 = ct.clone('clone_'+uuid4().hex[:10], '').wait().get_param()
 	ct2.start().wait()
-	print('Clone name = %s' % ct2.get_name())
+	print bcolors.OKGREEN + 'CLONE created with name: %s' %ct2.get_name() + bcolors.ENDC
 	logging.info('Clone created, started')
 	CT[ct2.get_name()]=ct2
 	CT_MD5_list[ct2.get_name()]=""
 	md5_checks(ct2.get_name())
 	if CT_MD5_list[ct2.get_name()]==CT_MD5_list[ct.get_name()]:
-		print 'MD5 check for clone PASSED'
+		print bcolors.OKGREEN + 'MD5 check for clone PASSED' + bcolors.ENDC
 		logging.info('MD5 check for clone PASSED')
 	else:
-		print 'MD5 check for clone FAILED'
+		print bcolors.FAIL +  'MD5 check for clone FAILED' + bcolors.ENDC
 		logging.error('MD5 check for clone FAILED')
 
 def search_vm(server, vm_to_find):
@@ -209,91 +211,101 @@ def switcher(vm, action):
 			vm.stop(True).wait()
 		except prlsdkapi.PrlSDKError, e:
                         logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 	if action=="start":
 		try:
 			vm.start().wait()
 		except prlsdkapi.PrlSDKError, e:
                         logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 	if action=="pause": #unimplemented yet
 		try:
 			vm.pause(True).wait()
 		except prlsdkapi.PrlSDKError, e:
                         logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 	if action=="resume":
 		try:
 			vm.resume().wait()
 		except prlsdkapi.PrlSDKError, e:
                         logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 	if action=="restart":
 		try:
 			vm.restart().wait()
 		except prlsdkapi.PrlSDKError, e:
 			logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 
 	if action=="reset": #unimplemented yet
 		try:
 			vm.reset().wait()
 		except prlsdkapi.PrlSDKError, e:
 			logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 	if action=="suspend":
                 try:
                         vm.suspend().wait()
                 except prlsdkapi.PrlSDKError, e:
 			logging.debug("Error: %s" % e)
-			raise halt
+			raise Halt
 
+	if action=="delete":
+                try:
+                        vm.delete().wait()
+                except prlsdkapi.PrlSDKError, e:
+			logging.debug("Error: %s" % e)
+			raise Halt
 
 def scope1(ct):
 #stop,start,suspend,resume,restart
 	try:
 		switcher(ct,'stop')
 		logging.info('CT %s STOPPED' %ct.get_name())
-		print '* STOP passed'
+		print bcolors.OKGREEN + '* STOP passed' + bcolors.ENDC
 	except:
 		logging.error('CT %s STOP FAILED' %ct.get_name())
-		print '* STOP failed'
+		print bcolors.FAIL + '* STOP failed' + bcolors.ENDC
 	#raw_input()
 	try:
 		switcher(ct,'start')
 		logging.info('CT %s STARTED' %ct.get_name())
-		print '* START passed'
+		print bcolors.OKGREEN + '* START passed' + bcolors.ENDC
 	except:
 		logging.error('CT %s START FAILED' %ct.get_name())
-		print '* START failed'
+		print bcolors.FAIL + '* START failed' + bcolors.ENDC
 	try:
 		switcher(ct,'suspend')
 		logging.info('CT %s SUSPENDED' %ct.get_name())
-		print '* SUSPEND passed'
+		print bcolors.OKGREEN + '* SUSPEND passed' + bcolors.ENDC
 	except:
 		logging.error('CT %s SUSPEND FAILED' %ct.get_name())
-		print '* SUSPEND failed'
+		print bcolors.FAIL + '* SUSPEND failed' + bcolors.ENDC
 	try:
                 switcher(ct,'resume')
                 logging.info('CT %s RESUMED' %ct.get_name())
-		print '* RESUME passed'
+		print bcolors.OKGREEN + '* RESUME passed' + bcolors.ENDC
         except:
                 logging.error('CT %s RESUME FAILED' %ct.get_name())
-		print '* RESUME failed'
+		print bcolors.FAIL + '* RESUME failed' + bcolors.ENDC
 	try:
                 switcher(ct,'restart')
                 logging.info('CT %s RESTARTED' %ct.get_name())
-		print '* RESTART passed'
+		print bcolors.OKGREEN + '* RESTART passed' + bcolors.ENDC
         except:
                 logging.error('CT %s RESTART FAILED' %ct.get_name())
-		print '* RESTART failed'
+		print bcolors.OKGREEN + '* RESTART failed' + bcolors.ENDC
 
 def cleanup():
 	print ''
 	print 'Cleaning up...'
 	for i in CT.values():
 		switcher(i, 'stop')
-		i.delete()
+		switcher(i, 'delete')
+		
+#raw_input('press enter')
+#for i in CT.values():
+#	i.delete().wait()
 
 def migrate(ct):
 	slave=prlsdkapi.Server()
@@ -305,14 +317,6 @@ def migrate(ct):
 		pass
 
 
-def prlinit():
-	prlsdkapi.init_server_sdk() # Initialize the library.
-        server = prlsdkapi.Server() # Create a Server object
-        login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
-
-
-
-
 def main():
 	logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', filename="checklist.log",filemode='w', level=logging.DEBUG)
 	prlsdkapi.init_server_sdk() # Initialize the library.
@@ -320,45 +324,46 @@ def main():
  	login_server(server, host_slicer(source_node)[2], host_slicer(source_node)[0], host_slicer(source_node)[1], consts.PSL_NORMAL_SECURITY);
 
 #	get_vm_list(server)
-	print ''
+	print bcolors.HEADER + '\nCreating containers...' + bcolors.ENDC
 	for r in xrange(1,5):
 		create_ct(server)
 	logging.debug(CT)
-	print 'Creating content...'
+	print bcolors.HEADER + '\nCreating content...' + bcolors.ENDC
 	create_bigfile()
+	print bcolors.OKGREEN + 'Done.' + bcolors.ENDC
 	logging.debug('[VE] %s' %CT_MD5_list.items())
 	
 	
 	#create snapshot CT#2
+	print bcolors.HEADER + '\nTaking snapshot' + bcolors.ENDC
 	try:
 		CT[CT.keys()[1]].create_snapshot('testfile')
-		print "Snapshot created"
+		print bcolors.OKGREEN + "Snapshot created" + bcolors.ENDC
 		logging.info('Snapshot for CT %s created' %CT.keys()[1])
 	except:
-		print "Snapshot creation failure"
+		print bcolors.FAIL + "Snapshot creation failure" + bcolors.ENDC
 		logging.error('Snapshot creation for CT %s FAILED' %CT.keys()[1])
-	print ''
-	print 'First scope started'
+	print '\nBase checks:'
 	scope1(CT[CT.keys()[0]])
 	print ''
-	print 'Create CLONE and check MD5 for test content...'
-	clone(CT[CT.keys()[2]])
+	#print bcolors.HEADER + '\nCreate CLONE and check MD5 for test content...' + bcolors.ENDC
+	#clone(CT[CT.keys()[2]])
 		
 
 	if dest_node!="":
-		print "Migrating..."
+		print bcolors.HEADER + "\nMigrating..." + bcolors.ENDC
 		try:
 			migrate(CT[CT.keys()[3]])
-			print 'Migrated, let\'s check MD5 inside..'
+			print bcolors.OKGREEN + 'Migrated, let\'s check MD5 inside..' + bcolors.ENDC
 			logging.info('CT %s migrated' %CT.keys()[3])
-			raw_input()
+			#raw_input()
 			mig_md5_check(CT.keys()[3])
 
 		except:
-			print "Migration FAILED"
+			print bcolors.FAIL + "Migration FAILED" + bcolors.ENDC
 
 	else:
-		print 'No slave node provided, migration test skiped'
+		print bcolors.BOLD + '\nNo slave node provided, migration test skiped' + bcolors.ENDC
 
 
 #	print CT[CT.keys()[1]].get_uuid()
@@ -368,7 +373,7 @@ def main():
 #	print CT.keys()[1] 
 #	print result.get_param_as_string()
 
-	cleanup()
+	#cleanup()
 
 
 
